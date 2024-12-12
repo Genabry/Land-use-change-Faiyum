@@ -1,0 +1,52 @@
+import arcpy
+from arcpy.sa import *
+
+# Set the environment
+arcpy.env.workspace = r"C:\path_to_your_project\workspace"
+arcpy.env.overwriteOutput = True
+
+# Input raster images (change these paths to your file locations)
+raster_1983 = "faiyum_1983_1985.tif"
+raster_2022 = "faiyum_2022_2024.tif"
+
+# Define output paths
+classified_1983 = "classified_1983.tif"
+classified_2022 = "classified_2022.tif"
+change_detection_output = "land_use_change.tif"
+
+# Perform supervised classification
+# Training samples should be created beforehand using ArcGIS Pro's Training Samples Manager
+training_samples = "C:\path_to_your_project\training_samples.shp"
+
+# Classify 1983-1985 raster
+print("Classifying the 1983-1985 raster...")
+arcpy.sa.MaximumLikelihoodClassification(
+    in_raster=raster_1983,
+    in_signature_file=training_samples,
+    out_raster=classified_1983
+)
+
+# Classify 2022-2024 raster
+print("Classifying the 2022-2024 raster...")
+arcpy.sa.MaximumLikelihoodClassification(
+    in_raster=raster_2022,
+    in_signature_file=training_samples,
+    out_raster=classified_2022
+)
+
+# Perform change detection
+print("Performing change detection...")
+change_detection = arcpy.ia.RasterCalculator(
+    [classified_1983, classified_2022],
+    "abs(Raster1 - Raster2)"
+)
+change_detection.save(change_detection_output)
+
+print(f"Change detection complete. Results saved at: {change_detection_output}")
+
+# Optional: Generate a map of change areas
+print("Generating map of significant changes...")
+significant_changes = SetNull(change_detection, 1, "VALUE = 0")
+significant_changes.save("significant_changes.tif")
+
+print("All processes complete.")
